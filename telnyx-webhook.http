@@ -1,0 +1,12 @@
+### Test Telnyx webhook locally
+POST http://localhost:3000/webhooks/telnyx
+Content-Type: application/json
+
+{
+  "data": {
+    "event_type": "call.initiated",
+    "payload": {
+      "call_control_id": "test123"
+    }
+  }
+}
