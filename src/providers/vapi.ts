@@ -1,9 +1,15 @@
-export const requireVapiStreamUrl = () => {
-  const streamUrl = process.env.VAPI_STREAM_WEBSOCKET_URL?.trim();
+const VAPI_SIP_DOMAIN = '@sip.vapi.ai';
 
-  if (!streamUrl) {
-    throw new Error('Missing VAPI_STREAM_WEBSOCKET_URL');
+export const requireVapiSipUri = () => {
+  const sipUri = process.env.VAPI_SIP_URI?.trim();
+
+  if (!sipUri) {
+    throw new Error('Missing VAPI_SIP_URI');
   }
 
-  return streamUrl;
+  if (!sipUri.startsWith('sip:') || !sipUri.includes(VAPI_SIP_DOMAIN)) {
+    throw new Error('VAPI_SIP_URI must be a valid SIP URI ending in @sip.vapi.ai');
+  }
+
+  return sipUri;
 };

@@ -1,11 +1,15 @@
 import { Request, Response } from 'express';
-import { createTelnyxClient } from '../providers/telnyx';
-import { requireVapiStreamUrl } from '../providers/vapi';
+import { answerCall, isVapiSipDestination, transferCallToVapiAgent } from '../services/calls';
 
 export const telnyxWebhook = async (req: Request, res: Response) => {
   const event = req.body;
   const eventType = event?.data?.event_type;
-  const callControlId = event?.data?.payload?.call_control_id;
+  const payload = event?.data?.payload;
+  const callControlId = payload?.call_control_id;
+  const direction = payload?.direction;
+  const destination = payload?.to;
+  const isVapiLeg = isVapiSipDestination(destination); // True for transfer-created leg pointing to sip.vapi.ai (Leg B).
+  const isInboundLeg = direction ? direction === 'incoming' : !isVapiLeg; // True for original caller leg we should answer/transfer (Leg A).
 
   // Ack first so Telnyx does not retry while we process call-control actions.
   res.sendStatus(200);
@@ -16,26 +20,30 @@ export const telnyxWebhook = async (req: Request, res: Response) => {
   }
 
   try {
-    console.log('Event data', event.data?.payload);
+    console.log('Telnyx event:', {
+      eventType,
+      callControlId,
+      direction,
+      destination,
+    });
 
     if (eventType === 'call.initiated') {
-      const client = createTelnyxClient();
+      if (!isInboundLeg || isVapiLeg) {
+        console.warn('Ignoring call.initiated for non-inbound or Vapi leg:', callControlId);
+        return;
+      }
 
-      await client.calls.actions.answer(callControlId, {});
-      console.log('Answered call:', callControlId);
+      await answerCall(callControlId);
       return;
     }
 
     if (eventType === 'call.answered') {
-      const client = createTelnyxClient();
-      const streamUrl = requireVapiStreamUrl();
+      if (!isInboundLeg || isVapiLeg) {
+        console.warn('Ignoring call.answered for non-inbound or Vapi leg:', callControlId);
+        return;
+      }
 
-      await client.calls.actions.startStreaming(callControlId, {
-        stream_url: streamUrl,
-        stream_track: 'inbound_track',
-      });
-
-      console.log('Started streaming call to Vapi:', callControlId);
+      await transferCallToVapiAgent(event.data, callControlId);
       return;
     }
 
