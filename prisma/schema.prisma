@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  ownerPhone String
+
+  phoneNumbers PhoneNumber[]
+  calls        Call[]
+  orders       Order[]
+
+  createdAt DateTime @default(now())
+}
+
+model PhoneNumber {
+  id        String @id @default(uuid())
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+
+  e164      String @unique
+  telnyxId  String @unique
+  isActive  Boolean @default(true)
+
+  calls     Call[]
+}
+
+model Call {
+  id                   String @id @default(uuid())
+  tenantId             String
+  tenant               Tenant @relation(fields: [tenantId], references: [id])
+
+  phoneNumberId        String
+  phoneNumber          PhoneNumber @relation(fields: [phoneNumberId], references: [id])
+
+  telnyxCallControlId  String @unique
+
+  fromPhoneE164        String
+  toPhoneE164          String
+
+  status               String
+  startedAt            DateTime @default(now())
+  endedAt              DateTime?
+  durationSeconds      Int?
+
+  order                Order?
+}
+
+model Order {
+  id              String @id @default(uuid())
+  tenantId        String
+  tenant          Tenant @relation(fields: [tenantId], references: [id])
+
+  callId          String @unique
+  call            Call @relation(fields: [callId], references: [id])
+
+  idempotencyKey  String
+  status          String @default("draft")
+
+  customerName    String?
+  customerPhone   String?
+  coalType        String?
+  quantity        Float?
+  address         String?
+
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, idempotencyKey])
+}
