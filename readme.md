@@ -89,12 +89,24 @@ http://localhost:3000
 Required now:
 
 - `TELNYX_API_KEY`
+- `TELNYX_PUBLIC_KEY`
 - `VAPI_SIP_URI`
-- `DATABASE_URL_DEV` (for Prisma CLI/migrations)
+- `DATABASE_URL`
 
-Optional/reserved:
+Read from:
 
-- `VAPI_API_KEY` (not used in current runtime flow yet)
+- `.env` at runtime (loaded by `src/config/env.ts`)
+
+## Environment usage rules
+
+- Use `env` from `src/config/env.ts` for all runtime config reads.
+- Do not use `process.env` directly outside `src/config/env.ts`.
+- Keep `dotenv/config` import only in `src/config/env.ts`.
+- For any new variable, update all of:
+- `src/config/env.ts` (add validation via `requireEnv` when required)
+- `.env.example`
+- this README section
+- Prefer required variables by default; only keep optional variables when there is a clear fallback behavior.
 
 ## Local webhook test
 
@@ -107,6 +119,6 @@ Content-Type: application/json
 
 ## Notes and limitations
 
-- Webhook signature validation is not implemented yet. Add Telnyx signature verification before production exposure.
+- Telnyx webhook signature verification is implemented in middleware and enforced before event handling.
 - Event payload parsing is currently permissive (`any`) and should be tightened with explicit types/validation.
 - No automated tests yet.
