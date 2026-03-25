@@ -1,21 +1,10 @@
-import { createTelnyxClient } from '../providers/telnyx';
-import { requireVapiSipUri } from '../providers/vapi';
-
-const VAPI_SIP_DOMAIN = '@sip.vapi.ai';
+import { createTelnyxClient } from "../../../integrations/telnyx/telnyx.client";
+import { requireVapiSipUri } from "../../../integrations/vapi/vapi.client";
 
 const customHeaders: Array<{ name: string; value: string }> = [
   { name: 'X-company_name', value: 'BEST COAL POL' },
   // { name: 'X-Products', value: 'Eco Coal 1200 zl; Premium Coal 1500 zl' },
 ];
-
-export const isVapiSipDestination = (destination?: string) => Boolean(destination && destination.toLowerCase().includes(VAPI_SIP_DOMAIN));
-
-export const answerCall = async (callControlId: string) => {
-  const client = createTelnyxClient();
-
-  await client.calls.actions.answer(callControlId, {});
-  console.log('Answered call:', callControlId);
-};
 
 export const transferCallToVapiAgent = async (data: any, callControlId: string) => {
   const client = createTelnyxClient();

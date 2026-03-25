@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { telnyxWebhook } from './routes/telnyx';
+import { telnyxWebhook } from './modules/calls/telnyx-webhook.controller';
 
 const app = express();
 app.use(express.json());

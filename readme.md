@@ -1,292 +1,112 @@
-# 🧠 AI Voice Assistant SaaS
+# AI Voice Assistant MVP
 
-This project is an MVP of an AI-powered voice assistant.
+This project is an MVP backend for handling inbound Telnyx calls and transferring them to a Vapi SIP destination.
 
-The system answers phone calls, collects customer orders using AI, and sends them via SMS to the yard owner.
+## Current scope
 
----
+- Receive Telnyx call webhooks.
+- Answer inbound calls.
+- Transfer eligible calls to Vapi SIP URI.
+- Keep architecture simple and modular for upcoming DB-backed call/order flows.
 
-# 🚀 Scope
+## Tech stack
 
-The goal is to build the simplest working system:
+- Node.js + Express (TypeScript)
+- Telnyx SDK
+- Prisma (schema + migrations prepared)
+- dotenv
 
-```
-Customer calls → AI talks → order collected → SMS sent
-```
+## Project structure
 
-No multi-tenancy, no billing, no dashboard (yet).
-
----
-
-# 🏗️ Tech Stack
-
-* **Telephony:** Telnyx
-* **AI Voice:** VAPI
-* **Backend:** Node.js (Express)
-* **Validation:** Zod
-* **SMS:** SMSAPI
-* **Local Dev:** ngrok
-
----
-
-# 📁 Project Structure
-
-```
+```text
 src/
-  index.ts
-  routes/
-    telnyx.ts
-    tools.ts
-  services/
-    sms.ts
-  utils/
+  server.ts
+  modules/
+    calls/
+      telnyx-webhook.controller.ts
+      call.service.ts
+      handlers/
+        call-actions.handler.ts
+        call-transfer.handler.ts
+  integrations/
+    telnyx/
+      telnyx.client.ts
+    vapi/
+      vapi.client.ts
+      vapi.utils.ts
+prisma/
+  schema.prisma
+  migrations/
 ```
 
----
+## Architecture
 
-# ⚙️ Setup
+- `modules` = what the system does (domain logic).
+- `integrations` = external providers/SDK wrappers.
+- `controller -> service -> handlers` flow inside a module.
+- Integration clients are created in `integrations/*`, not in controller files.
 
-## 1. Install dependencies
+## Runtime flow (Telnyx webhook)
 
-```
-npm install
-```
+Endpoint:
 
-## 2. Run dev server
-
-```
-npx ts-node-dev src/index.ts
-```
-
-Server runs on:
-
-```
-http://localhost:3000
-```
-
----
-
-## 3. Expose server (required for Telnyx + VAPI)
-
-```
-npx ngrok http 3000
-```
-
-Copy the HTTPS URL and use it in:
-
-* Telnyx webhook config
-* VAPI tool config
-
----
-
-# ☎️ Telnyx Webhook
-
-## Endpoint
-
-```
+```text
 POST /webhooks/telnyx
 ```
 
-## Behavior
+Flow:
 
-* Receives incoming call events
-* Logs event
-* Responds immediately (`200 OK`)
-* Later will route call to VAPI
+1. Controller immediately responds `200 OK`.
+2. Service parses event and routes by `event_type`.
+3. For inbound non-Vapi call legs:
+4. `call.initiated` -> answer call.
+5. `call.answered` -> transfer to Vapi SIP URI.
 
-## Example
+## Setup
 
-```ts
-export const telnyxWebhook = async (req, res) => {
-  const event = req.body;
+1. Install dependencies:
 
-  console.log("TELNYX EVENT:", event.data?.event_type);
-
-  res.sendStatus(200);
-};
+```bash
+npm install
 ```
 
----
+2. Create `.env` from `.env.example` and fill values.
 
-# 🤖 VAPI Assistant
+3. Run dev server:
 
-## Prompt
-
-```
-You are a coal order assistant.
-
-Collect:
-- name
-- coal type
-- quantity (tons)
-- delivery address
-- phone number
-
-When you have all data, call the create_order tool.
+```bash
+npm run dev
 ```
 
----
+Server listens on:
 
-# 🔧 AI Tool: Create Order
-
-## Endpoint
-
-```
-POST /api/tools/create-order
+```text
+http://localhost:3000
 ```
 
-## Schema
+## Environment variables
 
-```json
-{
-  "name": "string",
-  "coalType": "string",
-  "quantity": "number",
-  "address": "string",
-  "phone": "string"
-}
+Required now:
+
+- `TELNYX_API_KEY`
+- `VAPI_SIP_URI`
+- `DATABASE_URL_DEV` (for Prisma CLI/migrations)
+
+Optional/reserved:
+
+- `VAPI_API_KEY` (not used in current runtime flow yet)
+
+## Local webhook test
+
+Use `telnyx-webhook.http` or send:
+
+```http
+POST http://localhost:3000/webhooks/telnyx
+Content-Type: application/json
 ```
 
----
+## Notes and limitations
 
-## Example Implementation
-
-```ts
-import { z } from "zod";
-
-const schema = z.object({
-  name: z.string(),
-  coalType: z.string(),
-  quantity: z.number(),
-  address: z.string(),
-  phone: z.string(),
-});
-
-export const createOrder = async (req, res) => {
-  const parsed = schema.safeParse(req.body);
-
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid input" });
-  }
-
-  const order = parsed.data;
-
-  console.log("ORDER:", order);
-
-  await sendSMS(
-    process.env.OWNER_PHONE,
-    `New order:
-${order.coalType}
-${order.quantity} tons
-${order.address}
-${order.phone}`
-  );
-
-  return res.json({ success: true });
-};
-```
-
----
-
-# 📩 SMS Integration (SMSAPI)
-
-## Service
-
-```ts
-import axios from "axios";
-
-export const sendSMS = async (to, message) => {
-  await axios.post("https://api.smsapi.pl/sms.do", null, {
-    params: {
-      to,
-      message,
-      format: "json",
-    },
-    headers: {
-      Authorization: `Bearer ${process.env.SMSAPI_TOKEN}`,
-    },
-  });
-};
-```
-
----
-
-# 🔐 Environment Variables
-
-Create `.env`:
-
-```
-PORT=3000
-SMSAPI_TOKEN=your_smsapi_token
-OWNER_PHONE=48123123123
-TELNYX_API_KEY=your_telnyx_key
-```
-
----
-
-# 🧪 Testing the MVP
-
-## 1. Start backend
-
-## 2. Start ngrok
-
-## 3. Configure Telnyx webhook
-
-## 4. Configure VAPI tool
-
-## 5. Call your number
-
-Say:
-
-> "I want 2 tons of eco pea coal delivered to Warsaw..."
-
----
-
-## Expected Result
-
-* AI asks questions
-* AI calls `create_order`
-* Backend logs order
-* SMS is sent to owner
-
----
-
-# ⚠️ Known Limitations (MVP)
-
-* No database (orders are not persisted)
-* No multi-tenancy
-* No authentication
-* No retries / idempotency
-* No call tracking
-
----
-
-# 🧭 Next Steps
-
-After MVP works:
-
-1. Add PostgreSQL (Neon)
-2. Add `tenants` table
-3. Add `orders` persistence
-4. Track calls + usage
-5. Add call transfer to owner
-6. Add subscription limits
-
----
-
-# 🧠 Development Notes
-
-* Always respond quickly to Telnyx webhooks
-* Validate all AI input (never trust blindly)
-* Keep AI prompt simple and strict
-* Log everything during development
-
----
-
-# 🎯 Goal
-
-Get **one real phone call working end-to-end**.
-
-That is your first milestone.
-
----
+- Webhook signature validation is not implemented yet. Add Telnyx signature verification before production exposure.
+- Event payload parsing is currently permissive (`any`) and should be tightened with explicit types/validation.
+- No automated tests yet.
