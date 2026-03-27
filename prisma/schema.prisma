@@ -12,10 +12,19 @@ datasource db {
   provider = "postgresql"
 }
 
+enum CallStatus {
+  ringing
+  in_progress
+  completed
+  failed
+  no_answer
+  busy
+}
+
 model Tenant {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
+  id         String @id @default(uuid())
+  name       String
+  slug       String @unique
   ownerPhone String
 
   phoneNumbers PhoneNumber[]
@@ -26,56 +35,56 @@ model Tenant {
 }
 
 model PhoneNumber {
-  id        String @id @default(uuid())
-  tenantId  String
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  e164      String @unique
-  telnyxId  String @unique
-  isActive  Boolean @default(true)
+  e164     String  @unique
+  telnyxId String  @unique
+  isActive Boolean @default(true)
 
-  calls     Call[]
+  calls Call[]
 }
 
 model Call {
-  id                   String @id @default(uuid())
-  tenantId             String
-  tenant               Tenant @relation(fields: [tenantId], references: [id])
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  phoneNumberId        String
-  phoneNumber          PhoneNumber @relation(fields: [phoneNumberId], references: [id])
+  phoneNumberId String
+  phoneNumber   PhoneNumber @relation(fields: [phoneNumberId], references: [id])
 
-  telnyxCallControlId  String @unique
+  callControlId String @unique
 
-  fromPhoneE164        String
-  toPhoneE164          String
+  fromPhoneE164 String
+  toPhoneE164   String
 
-  status               String
-  startedAt            DateTime @default(now())
-  endedAt              DateTime?
-  durationSeconds      Int?
+  status          CallStatus
+  startedAt       DateTime   @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
 
-  order                Order?
+  order Order?
 }
 
 model Order {
-  id              String @id @default(uuid())
-  tenantId        String
-  tenant          Tenant @relation(fields: [tenantId], references: [id])
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  callId          String @unique
-  call            Call @relation(fields: [callId], references: [id])
+  callId String @unique
+  call   Call   @relation(fields: [callId], references: [id])
 
-  idempotencyKey  String
-  status          String @default("draft")
+  idempotencyKey String
+  status         String @default("draft")
 
-  customerName    String?
-  customerPhone   String?
-  coalType        String?
-  quantity        Float?
-  address         String?
+  customerName  String?
+  customerPhone String?
+  coalType      String?
+  quantity      Float?
+  address       String?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([tenantId, idempotencyKey])
 }
