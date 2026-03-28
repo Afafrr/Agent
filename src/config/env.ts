@@ -17,5 +17,5 @@ export const env = {
   TELNYX_PUBLIC_KEY: requireEnv('TELNYX_PUBLIC_KEY'),
   VAPI_SIP_URI: requireEnv('VAPI_SIP_URI'),
 
-  DATABASE_URL_DEV: requireEnv('DATABASE_URL_DEV'),
+  DATABASE_URL: requireEnv('DATABASE_URL'),
 };
