@@ -25,3 +25,6 @@ Thumbs.db
 .idea/
 notes.md
 /src/generated/prisma
+
+/logs
+file-logger.ts
