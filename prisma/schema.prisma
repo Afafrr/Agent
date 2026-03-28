@@ -13,10 +13,14 @@ datasource db {
 }
 
 enum CallStatus {
-  ringing
+  initiated
   in_progress
-  completed
+  ended_by_user
+  ended_by_ai
+  ai_silence_timeout
   failed
+  failed_telephony
+  failed_ai
   no_answer
   busy
 }
