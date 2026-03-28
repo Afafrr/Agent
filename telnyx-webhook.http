@@ -1,15 +1,50 @@
 ### Health
 GET  http://localhost:3000/
 
-### Test Telnyx webhook locally
-POST http://localhost:3000/webhooks/telnyx
+### Simulate call.hangup (safe local test, no Telnyx API call)
+POST http://localhost:3000/webhooks/telnyx/dev
+Content-Type: application/json
+
+{
+  "data": {
+    "event_type": "call.hangup",
+    "payload": {
+      "call_control_id": "test-call-001",
+      "direction": "incoming",
+      "from": "+15550001111",
+      "to": "+15073085087"
+    }
+  }
+}
+
+### Simulate inbound call.initiated (dev-only)
+POST http://localhost:3000/webhooks/telnyx/dev
 Content-Type: application/json
 
 {
   "data": {
     "event_type": "call.initiated",
     "payload": {
-      "call_control_id": "test123"
+      "call_control_id": "test-call-001",
+      "direction": "incoming",
+      "from": "+15550001111",
+      "to": "+15073085087"
+    }
+  }
+}
+
+### Simulate inbound call.answered (dev-only)
+POST http://localhost:3000/webhooks/telnyx/dev
+Content-Type: application/json
+
+{
+  "data": {
+    "event_type": "call.answered",
+    "payload": {
+      "call_control_id": "test-call-001",
+      "direction": "incoming",
+      "from": "+15550001111",
+      "to": "+15073085087"
     }
   }
 }
