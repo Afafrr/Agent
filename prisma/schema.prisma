@@ -64,7 +64,7 @@ model Call {
   toPhoneE164   String
 
   status          CallStatus
-  startedAt       DateTime   @default(now())
+  startedAt       DateTime
   endedAt         DateTime?
   durationSeconds Int?
 

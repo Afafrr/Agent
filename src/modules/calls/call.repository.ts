@@ -15,7 +15,7 @@ type UpdateCallRecordInput = {
 type UpdateCallRecordResult = { updated: false; reason: string } | { updated: true };
 
 export async function createCallRecord(data: CreateCallRecordInput): Promise<CreateCallRecordResult> {
-  if (!data.tenantId || !data.phoneNumberId || !data.fromPhoneE164 || !data.toPhoneE164) {
+  if (!data.tenantId || !data.phoneNumberId || !data.fromPhoneE164 || !data.toPhoneE164 || !data.startedAt) {
     return {
       created: false,
       reason: 'missing_required_fields',
@@ -31,6 +31,7 @@ export async function createCallRecord(data: CreateCallRecordInput): Promise<Cre
       fromPhoneE164: data.fromPhoneE164,
       toPhoneE164: data.toPhoneE164,
       status: data.status,
+      startedAt: data.startedAt,
     };
 
     call = await prisma.call.create({

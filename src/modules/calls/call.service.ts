@@ -1,7 +1,7 @@
 import { isVapiSipDestination } from '../../integrations/vapi/vapi.utils';
 import { CallStatus } from '../../generated/prisma/client';
 import { findPhoneNumber } from '../phone/phone.repository';
-import { mapCallStatus, parseDurationSeconds, parseEndedAt } from './utils/call-event.utils';
+import { mapCallStatus, parseDurationSeconds, parseEndedAt, parseStartedAt } from './utils/call-event.utils';
 import { createCallRecord, updateCallRecord } from './call.repository';
 import { answerCall } from './handlers/call-actions.handler';
 import { transferCallToAgent } from './handlers/call-transfer.handler';
@@ -44,6 +44,7 @@ export const handleTelnyxEvent = async (event: any) => {
       fromPhoneE164: fromPhone,
       toPhoneE164: destination,
       status: CallStatus.initiated,
+      startedAt: parseStartedAt(payload, event?.data) ?? new Date(),
     });
 
     if (!createResult.created) {
@@ -81,14 +82,14 @@ export const handleTelnyxEvent = async (event: any) => {
       payload,
       context: { isVapiLeg },
     });
-    const endedAt = parseEndedAt(payload);
+    const endedAt = parseEndedAt(payload, event?.data);
     const durationSeconds = parseDurationSeconds(payload);
     const updateResult = await updateCallRecord(callControlId, {
       status,
       endedAt,
       durationSeconds,
     });
-
+    console.log({ payload });
     if (!updateResult.updated) {
       if (updateResult.reason === 'call_not_found' && isVapiLeg) {
         console.log('Ignoring call.hangup for untracked Vapi leg:', callControlId);

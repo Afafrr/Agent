@@ -1,0 +1,2 @@
+ALTER TABLE "Call"
+  ALTER COLUMN "startedAt" DROP DEFAULT;

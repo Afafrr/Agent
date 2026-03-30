@@ -97,16 +97,32 @@ export const parseDurationSeconds = (payload: any): number | undefined => {
   return Math.round(parsed);
 };
 
-export const parseEndedAt = (payload: any): string | undefined => {
-  const rawEndedAt = payload?.ended_at ?? payload?.end_time ?? payload?.hangup_at ?? payload?.timestamp;
-  if (!rawEndedAt) {
-    return undefined;
-  }
-
-  const parsed = new Date(rawEndedAt);
-  if (Number.isNaN(parsed.getTime())) {
-    return undefined;
-  }
-
+const parseIsoDate = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return undefined;
   return parsed.toISOString();
 };
+
+export const parseStartedAt = (payload: any, eventData?: any): string | undefined =>
+  parseIsoDate(
+    payload?.start_time ??
+      payload?.started_at ??
+      payload?.startTime ??
+      payload?.timestamp ??
+      eventData?.occurred_at ??
+      eventData?.occurredAt ??
+      eventData?.timestamp,
+  );
+
+export const parseEndedAt = (payload: any, eventData?: any): string | undefined =>
+  parseIsoDate(
+    payload?.ended_at ??
+      payload?.end_time ??
+      payload?.hangup_at ??
+      payload?.endTime ??
+      payload?.timestamp ??
+      eventData?.occurred_at ??
+      eventData?.occurredAt ??
+      eventData?.timestamp,
+  );
