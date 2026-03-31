@@ -1,0 +1,33 @@
+@baseUrl = http://localhost:3000
+
+### Simulate Vapi call status update (dev-only)
+POST {{baseUrl}}/webhooks/vapi/dev
+Content-Type: application/json
+
+{
+  "type": "call-status",
+  "status": "ended",
+  "endedReason": "assistant-ended-call",
+  "duration_seconds": 93,
+  "metadata": {
+    "telnyx_call_control_id": "test-call-001"
+  }
+}
+
+### Simulate Vapi in-progress update with SIP header mapping (dev-only)
+POST {{baseUrl}}/webhooks/vapi/dev
+Content-Type: application/json
+
+{
+  "type": "call-status",
+  "status": "in-progress",
+  "call": {
+    "transport": {
+      "sip": {
+        "headers": {
+          "x-telnyx-call-control-id": "test-call-001"
+        }
+      }
+    }
+  }
+}

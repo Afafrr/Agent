@@ -97,6 +97,7 @@ Required now:
 - `TELNYX_API_KEY`
 - `TELNYX_PUBLIC_KEY`
 - `VAPI_SIP_URI`
+- `VAPI_WEBHOOK_HMAC_SECRET`
 - `DATABASE_URL`
 
 Read from:

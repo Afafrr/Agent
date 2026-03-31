@@ -105,5 +105,5 @@ export const handleTelnyxEvent = async (event: any) => {
 };
 
 export const handleVapiEvent = async (event: any) => {
-  console.log('VAPI EVENT:', event);
+  const type = event?.message?.type;
 };

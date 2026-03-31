@@ -1,8 +1,8 @@
 import express from 'express';
 import { telnyxWebhook } from './modules/calls/telnyx-webhook.controller';
-import { handleTelnyxEvent } from './modules/calls/call.service';
 import { vapiWebhook } from './modules/calls/vapi-webhook.controller';
 import { verifyWebhookSignature } from './integrations/telnyx/telnyx.middleware';
+import { verifyVapiWebhookSignature } from './integrations/vapi/vapi.middleware';
 
 const app = express();
 app.get('/', (_, res) => {
@@ -11,7 +11,7 @@ app.get('/', (_, res) => {
 
 // Raw body required for signature verification
 app.post('/webhooks/telnyx', express.raw({ type: 'application/json' }), verifyWebhookSignature, telnyxWebhook);
-app.post('/webhooks/vapi', express.json(), vapiWebhook);
+app.post('/webhooks/vapi', express.raw({ type: 'application/json' }), verifyVapiWebhookSignature, vapiWebhook);
 
 app.use(express.json());
 
