@@ -79,16 +79,13 @@ model Order {
   callId String @unique
   call   Call   @relation(fields: [callId], references: [id])
 
-  idempotencyKey String
-  status         String @default("draft")
+  status String @default("draft")
 
   customerName  String?
   customerPhone String?
-  coalType      String?
-  quantity      Float?
+  product       String?
+  amount_tons   Float?
   address       String?
 
   createdAt DateTime @default(now())
-
-  @@unique([tenantId, idempotencyKey])
 }
