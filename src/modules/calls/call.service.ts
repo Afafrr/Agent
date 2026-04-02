@@ -51,7 +51,6 @@ export const handleTelnyxEvent = async (event: any) => {
       console.warn('Call record creation skipped:', createResult.reason, callControlId);
       return;
     }
-    console.log({ createResult });
 
     await answerCall(callControlId);
     return;
@@ -105,5 +104,40 @@ export const handleTelnyxEvent = async (event: any) => {
 };
 
 export const handleVapiEvent = async (event: any) => {
-  const type = event?.message?.type;
+  const message = event?.message;
+  const messages = message?.messages;
+  const toolCalls = Array.isArray(messages) ? messages.filter((msg) => msg?.role === 'tool_calls' && Array.isArray(msg?.toolCalls)).flatMap((msg) => msg.toolCalls) : [];
+
+  if (toolCalls.length > 0) {
+    console.log('VAPI tool calls:', toolCalls);
+  }
+
+  const callControlId =
+    message?.call?.metadata?.telnyx_call_control_id ??
+    message?.call?.transport?.sip?.headers?.['X-telnyx-call-control-id'] ??
+    message?.call?.phoneCallProviderDetails?.sip?.headers?.['X-telnyx-call-control-id'];
+
+  if (!callControlId) {
+    console.warn('VAPI EVENT missing telnyx call control id:', message?.type);
+    return;
+  }
+
+  const status = mapCallStatus({ provider: 'vapi', payload: message });
+  const durationSeconds = parseDurationSeconds({
+    ...message,
+    duration_seconds: message?.duration_seconds ?? message?.durationSeconds ?? message?.call?.durationSeconds,
+    call_duration: message?.call_duration ?? message?.callDuration,
+  });
+
+  const updateResult = await updateCallRecord(callControlId, {
+    status,
+    durationSeconds,
+  });
+
+  if (!updateResult.updated) {
+    console.warn('VAPI call update skipped:', updateResult.reason, callControlId);
+    return;
+  }
+
+  console.log('VAPI call updated:', { callControlId, status, durationSeconds });
 };

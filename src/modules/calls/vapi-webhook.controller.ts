@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { handleVapiEvent } from './call.service';
 
 export const vapiWebhook = async (req: Request, res: Response) => {
-  res.sendStatus(200);
+  res.json({ success: true });
 
   try {
     await handleVapiEvent(req.body);

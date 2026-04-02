@@ -1,5 +1,5 @@
-import { createTelnyxClient } from "../../../integrations/telnyx/telnyx.client";
-import { requireVapiSipUri } from "../../../integrations/vapi/vapi.client";
+import { createTelnyxClient } from '../../../integrations/telnyx/telnyx.client';
+import { requireVapiSipUri } from '../../../integrations/vapi/vapi.client';
 
 const customHeaders: Array<{ name: string; value: string }> = [
   { name: 'X-company_name', value: 'BEST COAL POL' },
@@ -16,7 +16,7 @@ export const transferCallToAgent = async (data: any, callControlId: string) => {
     to: sipUri,
     from,
     command_id: `transfer-to-agent-${callControlId}`,
-    custom_headers: customHeaders,
+    custom_headers: [{ name: 'X-telnyx-call-control-id', value: callControlId }, ...customHeaders],
   });
 
   console.log('Transferred call to agent SIP URI:', {
