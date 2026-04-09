@@ -9,6 +9,8 @@ export const handleVapiEvent = async (event: any) => {
   const message = event?.message;
   const type = message?.type;
   const callControlId =
+    // Vapi has moved this Telnyx header between payload shapes; check the newest metadata slot first and
+    // then fall back to SIP transport details used by earlier webhook versions.
     message?.call?.metadata?.telnyx_call_control_id ??
     message?.call?.transport?.sip?.headers?.['X-telnyx-call-control-id'] ??
     message?.call?.phoneCallProviderDetails?.sip?.headers?.['X-telnyx-call-control-id'];
@@ -21,6 +23,8 @@ export const handleVapiEvent = async (event: any) => {
   await handleOrderToolCalls(callControlId, message);
 
   if (type !== 'end-of-call-report') {
+    // Most Vapi events are intermediate conversation updates. We only finalize call status once Vapi
+    // publishes the terminal report so Telnyx remains the source of truth for earlier states.
     return;
   }
 

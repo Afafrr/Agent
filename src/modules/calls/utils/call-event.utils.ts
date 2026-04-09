@@ -60,7 +60,6 @@ const mapTelnyxHangupStatus = (payload: any, context?: HangupStatusMappingContex
 const isVapiErrorReason = (reason: string): boolean => includesAny(reason, ['error', 'failed', 'pipeline-error', 'worker-died', 'worker-shutdown']);
 
 const mapVapiStatus = (payload: any): CallStatus => {
-  // const type = String(payload?.status ?? payload?.call?.status ?? '').toLowerCase();
   const endedReason = String(payload?.endedReason ?? payload?.ended_reason ?? payload?.call?.endedReason ?? '').toLowerCase();
   const statusFromMap = VAPI_ENDED_REASON_MAP.get(endedReason);
   if (statusFromMap) return statusFromMap;
@@ -94,6 +93,7 @@ const parseIsoDate = (value: unknown): string | undefined => {
   if (!value) return undefined;
   const parsed = new Date(String(value));
   if (Number.isNaN(parsed.getTime())) return undefined;
+  // Store normalized ISO strings so mixed provider formats end up comparable before Prisma casts them.
   return parsed.toISOString();
 };
 

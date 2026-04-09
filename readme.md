@@ -1,137 +1,60 @@
-# AI Voice Assistant MVP
+# Multi-Tenant AI Voice Assistant Backend
 
-This project is an MVP backend for handling inbound Telnyx calls and transferring them to a Vapi SIP destination.
+## 1. Overview
 
-## Current scope
+This project is a production-oriented backend for a multi-tenant AI voice assistant SaaS. It handles inbound phone calls, resolves the correct tenant from the dialed number, bridges the live call from Telnyx into a Vapi SIP assistant, and persists call and order state in PostgreSQL.
 
-- Receive Telnyx call webhooks.
-- Receive Vapi call webhooks.
-- Answer inbound calls.
-- Transfer eligible calls to Vapi SIP URI.
-- Keep architecture simple and modular for upcoming DB-backed call/order flows.
+The primary use case is customer phone ordering. A caller dials a business number, the AI assistant handles the conversation in real time, and structured tool calls from that conversation are converted into order records.
 
-## Tech stack
+## 2. Key Features
 
-- Node.js + Express (TypeScript)
-- Telnyx SDK
-- Prisma (schema + migrations prepared)
-- dotenv
+- Multi-tenant data model with explicit tenant ownership across `PhoneNumber`, `Call`, and `Order`.
+- Tenant resolution derived from the inbound number and persisted call context, not assistant-provided payloads.
+- Signed, event-driven webhook handling for both Telnyx and Vapi.
+- Real-time SIP handoff from Telnyx to Vapi, with AI tool calls converted into order records.
+- Idempotent call and order persistence using database uniqueness guarantees to absorb duplicate webhook deliveries.
+- End-to-end call lifecycle tracking with normalized phone numbers, timestamps, durations, and hangup causes.
+- Database design centered on routing and deduplication keys such as `e164`, `telnyxId`, `callControlId`, and `callId`.
+- Repository-level error handling so expected retry scenarios do not surface as application failures.
 
-## Project structure
-
-```text
-src/
-  server.ts
-  modules/
-    calls/
-      telnyx-webhook.controller.ts
-      vapi-webhook.controller.ts
-      call.service.ts
-      handlers/
-        call-actions.handler.ts
-        call-transfer.handler.ts
-  integrations/
-    telnyx/
-      telnyx.client.ts
-    vapi/
-      vapi.client.ts
-      vapi.utils.ts
-prisma/
-  schema.prisma
-  migrations/
-```
-
-## Architecture
-
-- `modules` = what the system does (domain logic).
-- `integrations` = external providers/SDK wrappers.
-- `controller -> service -> handlers` flow inside a module.
-- Integration clients are created in `integrations/*`, not in controller files.
-
-AI assistant coding conventions live in `.github/copilot-instructions.md`.
-
-## Runtime flow (Telnyx webhook)
-
-Endpoint:
+## 3. Architecture Overview
 
 ```text
-POST /webhooks/telnyx
-POST /webhooks/vapi
+Customer
+  -> Telnyx inbound number
+  -> POST /webhooks/telnyx
+  -> Controller -> Service -> Repository
+  -> Telnyx call answer + SIP transfer
+  -> Vapi assistant
+  -> POST /webhooks/vapi
+  -> Tool-call processing + call status updates
+  -> PostgreSQL
 ```
 
-Flow:
+- `Telnyx` is the telephony ingress layer. It delivers inbound call events and executes answer/transfer actions.
+- `Express controllers` terminate signed webhooks quickly and hand off provider-specific payloads for processing.
+- `Services` orchestrate provider workflows, correlate events by provider IDs, and map external event semantics into internal state transitions.
+- `Repositories` own Prisma access, constraint handling, and idempotent persistence behavior.
+- `Vapi` runs the live AI voice assistant over SIP and emits structured tool calls plus terminal call reports.
+- `PostgreSQL` is the durable source of truth for tenant routing, calls, and orders.
 
-1. Controller immediately responds `200 OK`.
-2. Service parses event and routes by `event_type`.
-3. For inbound non-Vapi call legs:
-4. `call.initiated` -> answer call.
-5. `call.answered` -> transfer to Vapi SIP URI.
-6. `Vapi webhook` -> update tracked call status/duration using call control ID from metadata or SIP headers.
+## 4. Technical Highlights
 
-## Setup
+- Duplicate webhook delivery and race conditions are handled through database-backed idempotency, not request-memory flags. `Call.callControlId` is unique, `Order.callId` is unique, and repository methods convert expected uniqueness violations into no-op outcomes instead of 500s.
+- The backend is stateless. Request handlers rely on persisted call context and provider identifiers, which makes the service horizontally scalable and safe to run behind a platform like Railway.
+- Multi-tenant safety is enforced by deriving tenant ownership from the inbound phone number and the persisted call record. A Vapi tool call can create an order, but it cannot choose or override the tenant.
+- The codebase uses a clear controller/service/repository split. Controllers handle transport concerns, services handle orchestration and business flow, repositories isolate database behavior, and provider SDK code lives under `src/integrations`.
+- The system orchestrates two external platforms with different event shapes and timing models. Telnyx is the source of truth for ingress and transfer actions, while Vapi contributes AI-side tool execution and terminal call outcomes.
+- Call persistence happens before answer/transfer actions so the system does not lose tenant routing context if downstream provider operations succeed while later events are still arriving.
+- Provider events are correlated by durable IDs such as `call_control_id`, not by arrival order. That design is necessary for webhook retries, duplicate deliveries, and partially reordered event streams.
+- Payload normalization is explicit. Timestamps are converted into ISO-compatible values, durations are parsed into numeric seconds, and provider-specific hangup reasons are mapped into a stable internal `CallStatus` model.
 
-1. Install dependencies:
+## 5. Tech Stack
 
-```bash
-npm install
-```
-
-2. Create `.env` from `.env.example` and fill values.
-
-3. Run dev server:
-
-```bash
-npm run dev
-```
-
-Server listens on:
-
-```text
-http://localhost:3000
-```
-
-## Environment variables
-
-Required now:
-
-- `TELNYX_API_KEY`
-- `TELNYX_PUBLIC_KEY`
-- `VAPI_SIP_URI`
-- `VAPI_WEBHOOK_HMAC_SECRET`
-- `DATABASE_URL`
-
-Read from:
-
-- `.env` at runtime (loaded by `src/config/env.ts`)
-
-## Environment usage rules
-
-- Use `env` from `src/config/env.ts` for all runtime config reads.
-- Do not use `process.env` directly outside `src/config/env.ts`.
-- Keep `dotenv/config` import only in `src/config/env.ts`.
-- For any new variable, update all of:
-- `src/config/env.ts` (add validation via `requireEnv` when required)
-- `.env.example`
-- this README section
-- Prefer required variables by default; only keep optional variables when there is a clear fallback behavior.
-
-## Local webhook test
-
-Use `telnyx-webhook.http` and `vapi-webhook.http` or send:
-
-```http
-POST http://localhost:3000/webhooks/telnyx
-Content-Type: application/json
-```
-
-```http
-POST http://localhost:3000/webhooks/vapi
-Content-Type: application/json
-```
-
-## Notes and limitations
-
-- Telnyx webhook signature verification is implemented in middleware and enforced before event handling.
-- Vapi webhook signature verification is not implemented yet.
-- Event payload parsing is currently permissive (`any`) and should be tightened with explicit types/validation.
-- No automated tests yet.
+- Node.js
+- TypeScript
+- Express
+- Prisma ORM
+- PostgreSQL on Neon
+- Telnyx telephony API
+- Vapi SIP voice assistant integration

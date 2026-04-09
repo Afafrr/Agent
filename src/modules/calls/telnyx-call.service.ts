@@ -8,6 +8,7 @@ import { mapCallStatus, parseDurationSeconds, parseEndedAt, parseStartedAt } fro
 
 const handleInitiatedEvent = async (event: any, callControlId: string, isInboundLeg: boolean, isVapiLeg: boolean) => {
   if (!isInboundLeg || isVapiLeg) {
+    // Telnyx also emits events for the SIP leg we create toward Vapi. Only the customer-facing inbound leg
     console.warn('Ignoring call.initiated for non-inbound or Vapi leg:', callControlId);
     return;
   }
@@ -97,6 +98,8 @@ export const handleTelnyxEvent = async (event: any) => {
   const direction = payload?.direction;
   const destination = payload?.to;
   const isVapiLeg = isVapiSipDestination(destination);
+  // Older / partial webhook payloads may omit direction. In that case infer the customer leg by excluding
+  // the transfer destination we own on Vapi.
   const isInboundLeg = direction ? direction === 'incoming' : !isVapiLeg;
 
   if (!callControlId) {
