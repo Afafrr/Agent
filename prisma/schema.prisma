@@ -75,7 +75,8 @@ model Call {
   phoneNumberId String
   phoneNumber   PhoneNumber @relation(fields: [phoneNumberId], references: [id])
 
-  callControlId String @unique
+  callControlId String  @unique
+  vapiCallId    String? @unique
 
   fromPhoneE164 String
   toPhoneE164   String

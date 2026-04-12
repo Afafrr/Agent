@@ -23,7 +23,6 @@ export const handleOrderToolCalls = async (callControlId: string, message: any):
   const firstMessageWithToolCalls = messages?.find((item: any) => Array.isArray(item?.toolCalls) && item.toolCalls.length > 0);
   const toolCalls = firstMessageWithToolCalls?.toolCalls;
 
-  console.log({ toolCalls });
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
     return;
   }
@@ -33,7 +32,6 @@ export const handleOrderToolCalls = async (callControlId: string, message: any):
   }
 
   const functionName = firstToolCall.function.name;
-  console.log({ firstToolCall, functionName });
 
   if (functionName !== 'save_order') {
     // Ignore unrelated tools here so this handler stays narrowly responsible for order persistence.
