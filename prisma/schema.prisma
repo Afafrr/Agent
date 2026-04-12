@@ -27,15 +27,32 @@ enum CallStatus {
 
 model Tenant {
   id         String @id @default(uuid())
-  name       String
-  slug       String @unique
+  ownerName  String
   ownerPhone String
 
   phoneNumbers PhoneNumber[]
   calls        Call[]
   orders       Order[]
+  agentConfig  TenantPromptConfig?
 
   createdAt DateTime @default(now())
+}
+
+model TenantPromptConfig {
+  id       String @id @default(uuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  //conversation
+  companyName  String
+  greeting     String
+  systemPrompt String? //personality
+
+  products       Json
+  additionalInfo String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
 }
 
 model PhoneNumber {
