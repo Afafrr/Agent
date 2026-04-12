@@ -12,7 +12,7 @@ type UpdateCallRecordInput = {
   status?: CreateCallRecordInput['status'];
   endedAt?: Date | string;
   durationSeconds?: number;
-  vapiCallId?: string;
+  agentCallId?: string;
 };
 type UpdateCallRecordResult = { updated: false; reason: string } | { updated: true; tenantId: string };
 
@@ -58,7 +58,7 @@ export async function createCallRecord(data: CreateCallRecordInput): Promise<Cre
 }
 
 async function updateCallRecordByWhere(where: Prisma.CallWhereUniqueInput, data: UpdateCallRecordInput): Promise<UpdateCallRecordResult> {
-  if (!data.status && !data.vapiCallId) {
+  if (!data.status && !data.agentCallId) {
     return {
       updated: false,
       reason: 'missing_required_fields',
@@ -73,7 +73,7 @@ async function updateCallRecordByWhere(where: Prisma.CallWhereUniqueInput, data:
         status: data.status,
         endedAt: data.endedAt,
         durationSeconds: data.durationSeconds,
-        vapiCallId: data.vapiCallId,
+        agentCallId: data.agentCallId,
       },
     });
   } catch (error: any) {
@@ -106,8 +106,8 @@ export async function findCallByControlId(callControlId: string): Promise<Call |
   });
 }
 
-export async function findCallByAgentCallId(vapiCallId: string): Promise<Call | null> {
+export async function findCallByAgentCallId(agentCallId: string): Promise<Call | null> {
   return prisma.call.findUnique({
-    where: { vapiCallId },
+    where: { agentCallId },
   });
 }

@@ -6,7 +6,7 @@ import { mapCallStatus } from './utils/call-event.utils';
 export const handleVapiEvent = async (event: any) => {
   const message = event?.message;
   const type = message?.type;
-  const vapiCallId = message?.call?.id;
+  const agentCallId = message?.call?.id;
   const callControlId =
     // Vapi has moved this Telnyx header between payload shapes; check the newest metadata slot first and
     // then fall back to SIP transport details used by earlier webhook versions.
@@ -19,11 +19,11 @@ export const handleVapiEvent = async (event: any) => {
     return;
   }
 
-  if (vapiCallId) {
-    // Persist Vapi's call ID so server-url tool requests that only send x-call-id can be mapped back to our call row.
-    const vapiLinkResult = await updateCallRecordByControlId(callControlId, { vapiCallId });
+  if (agentCallId) {
+    // Persist the agent-side call ID so server-url tool requests that only send x-call-id can be mapped back to our call row.
+    const vapiLinkResult = await updateCallRecordByControlId(callControlId, { agentCallId });
     if (!vapiLinkResult.updated && vapiLinkResult.reason !== 'call_not_found') {
-      console.warn('VAPI call ID link skipped:', { callControlId, vapiCallId, reason: vapiLinkResult.reason });
+      console.warn('Agent call ID link skipped:', { callControlId, agentCallId, reason: vapiLinkResult.reason });
     }
   }
 
