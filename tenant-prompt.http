@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:3000
+
+# GET request has no body — sign with empty string:
+# node -e "
+#   const {createHmac}=require('crypto');
+#   const ts=String(Date.now());
+#   const sig=createHmac('sha256','3295d47b3a3265a422e1363356de622b699bde7c9d311659ed12d349cfc929fd').update(ts+'.').digest('hex');
+#   console.log('timestamp:',ts);
+#   console.log('x-signature:',sig);
+# "
+
+@vapiTimestamp = 1775993358713
+@vapiSignature = f5df6fb60bdfc33ad2725b49c6c052850a0289b58cab2bfcbd4a1758a4196dd8
+
+### Get tenant prompt config (Vapi tool-calls format)
+GET {{baseUrl}}/tenant/prompt
+Content-Type: application/json
+x-timestamp: {{vapiTimestamp}}
+x-signature: {{vapiSignature}}
+
+###
+
+### Get tenant prompt config — SIP header fallback
+GET {{baseUrl}}/tenant/prompt
+Content-Type: application/json
+x-timestamp: {{vapiTimestamp}}
+x-signature: {{vapiSignature}}
+
+{
+  "message": {
+    "type": "tool-calls",
+    "call": {
+      "transport": {
+        "sip": {
+          "headers": {
+            "X-telnyx-call-control-id": "CALL_CONTROL_ID"
+          }
+        }
+      }
+    },
+    "toolCallList": [
+      {
+        "id": "tool-call-1",
+        "type": "function",
+        "function": {
+          "name": "get_prompt_config",
+          "arguments": "{}"
+        }
+      }
+    ]
+  }
+}
