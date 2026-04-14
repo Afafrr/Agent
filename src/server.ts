@@ -1,9 +1,7 @@
 import express from 'express';
 import { telnyxWebhook } from './modules/calls/telnyx-webhook.controller';
-import { vapiWebhook } from './modules/calls/vapi-webhook.controller';
-import { getPromptConfig } from './modules/tenants/tenant-prompt-config.controller';
 import { verifyWebhookSignature } from './integrations/telnyx/telnyx.middleware';
-import { verifyVapiWebhookSignature } from './integrations/vapi/vapi.middleware';
+import { agentRouter } from './modules/router/agent.router';
 
 const app = express();
 app.get('/', (_, res) => {
@@ -11,10 +9,13 @@ app.get('/', (_, res) => {
 });
 
 // Raw body required for signature verification
-app.post('/webhooks/telnyx', express.raw({ type: 'application/json' }), verifyWebhookSignature, telnyxWebhook);
-app.post('/webhooks/vapi', express.raw({ type: 'application/json' }), verifyVapiWebhookSignature, vapiWebhook);
+const rawBody = express.Router();
+rawBody.use(express.raw({ type: 'application/json' }));
 
-app.get('/tools/agent-prompt', express.raw({ type: 'application/json' }), verifyVapiWebhookSignature, getPromptConfig);
+rawBody.post('/webhooks/telnyx', verifyWebhookSignature, telnyxWebhook); //route for telephony webhooks
+rawBody.use('/agent', agentRouter); //route for agent related endpoints
+
+app.use(rawBody);
 
 app.use(express.json());
 

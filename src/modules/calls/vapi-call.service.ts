@@ -1,4 +1,4 @@
-import { handleOrderToolCalls } from '../orders/order.service';
+import { env } from '../../config/env';
 import { findCallByControlId, updateCallRecordByControlId, updateCallRecordById } from './call.repository';
 import { mapCallStatus } from './utils/call-event.utils';
 
@@ -6,7 +6,7 @@ export const handleVapiEvent = async (event: any) => {
   const message = event?.message;
   const type = message?.type;
   const agentCallId = message?.call?.id;
-  const callControlId =
+  let callControlId =
     // Vapi has moved this Telnyx header between payload shapes; check the newest metadata slot first and
     // then fall back to SIP transport details used by earlier webhook versions.
     message?.call?.metadata?.telnyx_call_control_id ??
@@ -15,7 +15,8 @@ export const handleVapiEvent = async (event: any) => {
 
   if (!callControlId) {
     console.warn('VAPI EVENT missing call_control_id in message:', type);
-    return;
+    if (env.NODE_ENV === 'production') return;
+    else callControlId = 'test' + Math.random(); // allow processing in non-production env for testing even if call_control_id is missing
   }
 
   if (agentCallId) {
@@ -26,30 +27,25 @@ export const handleVapiEvent = async (event: any) => {
     }
   }
 
-  await handleOrderToolCalls(callControlId, message);
+  // update call length and status that comes in the end of call report
+  if (type === 'end-of-call-report') {
+    const call = await findCallByControlId(callControlId);
+    if (!call) {
+      console.warn('No call record found for VAPI event with call_control_id:', callControlId);
+      return;
+    }
 
-  if (type !== 'end-of-call-report') {
-    // Most Vapi events are intermediate conversation updates. We only finalize call status once Vapi
-    // publishes the terminal report so Telnyx remains the source of truth for earlier states.
-    return;
-  }
+    const durationSeconds = message.durationSeconds;
+    const status = mapCallStatus({ provider: 'vapi', payload: message });
 
-  const call = await findCallByControlId(callControlId);
-  if (!call) {
-    console.warn('No call record found for VAPI event with call_control_id:', callControlId);
-    return;
-  }
+    const updateResult = await updateCallRecordById(call.id, {
+      status,
+      durationSeconds,
+    });
 
-  const durationSeconds = message.durationSeconds;
-  const status = mapCallStatus({ provider: 'vapi', payload: message });
-
-  const updateResult = await updateCallRecordById(call.id, {
-    status,
-    durationSeconds,
-  });
-
-  console.log('VAPI call updated:', { callId: call.id, status, durationSeconds });
-  if (!updateResult.updated) {
-    console.warn('VAPI call update skipped:', updateResult.reason, call.id);
+    console.log('VAPI call updated:', { callId: call.id, status, durationSeconds });
+    if (!updateResult.updated) {
+      console.warn('VAPI call update skipped:', updateResult.reason, call.id);
+    }
   }
 };

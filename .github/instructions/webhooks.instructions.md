@@ -26,6 +26,7 @@ applyTo: '**/*.controller.ts,**/*.service.ts,**/*.middleware.ts,**/call-event.ut
   2. `message.call.transport.sip.headers['X-telnyx-call-control-id']`
   3. `message.call.phoneCallProviderDetails.sip.headers['X-telnyx-call-control-id']`
 - When adding a new fallback location, add it to `vapi-call.service.ts` extraction logic.
+- Some Vapi server-url tool requests only send the agent-side call ID header (`x-call-id`), so the backend stores both `callControlId` and `agentCallId` on the call record and links them when richer webhook events arrive.
 
 ## Status Normalization
 
